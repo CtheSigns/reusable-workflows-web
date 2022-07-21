@@ -1,0 +1,129 @@
+name: Reusable CD
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: false
+        type: string
+        default: "dev"
+        description: dev, qa, uat, staging or prod
+      awsRegion:
+        required: false
+        type: string
+        default: eu-west-2
+      cloudFrontS3Bucket:
+        required: true
+        type: string
+        description: Name of S3 bucket for cloudfront
+      cloudfrontDistribution:
+        required: true
+        type: string
+        description: Id of cloudfront distribution
+      bucketBuildPath:
+        required: false
+        type: string
+        default: ""
+        description: Optional additional path for storing build files in cloudfront
+      cloudfrontOriginId:
+        required: true
+        type: string
+        description: Origin ID for cloudfront
+    secrets:
+      awsAccessKey:
+        required: true
+      awsSecretKey:
+        required: true
+      rollbarToken:
+        required: true
+      e2eGithubAccessToken:
+        required: true
+
+env:
+  ENV: ${{ inputs.env }}
+  ROLLBAR_ACCESS_TOKEN: ${{ secrets.rollbarToken }}
+  ENVIRONMENT: ${{ inputs.env }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.10.0
+          cache: npm
+          FORCE_COLOR: 0
+
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Build
+        run: npm run build:${{ inputs.env }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: dist
+          path: dist
+
+  deployToCloudFront:
+    name: Deploy to Cloudfront
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.awsAccessKey }}
+          aws-secret-access-key: ${{ secrets.awsSecretKey }}
+          aws-region: ${{ inputs.awsRegion }}
+
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.10.0
+          cache: npm
+          FORCE_COLOR: 0
+
+      - name: Download Artifact
+        uses: actions/download-artifact@master
+        with:
+          name: dist
+          path: dist
+
+      - name: Deploy to cloudfront
+        uses: lbertenasco/s3-deploy@v1
+        with:
+          folder: dist
+          bucket: ${{ inputs.cloudFrontS3Bucket }}/${{ github.sha }}${{ inputs.bucketBuildPath }}
+          dist-id: ${{ inputs.cloudfrontDistribution }}
+          invalidation: /*
+
+      - name: Update origin
+        run: |
+          CLOUDFRONT_DISTRIBUTION_ID="${{ inputs.cloudfrontDistribution }}"
+          NEW_ORIGIN_PATH="/${{ github.sha }}"
+          CLOUDFRONT_ORIGIN_ID="${{ inputs.cloudfrontOriginId }}"
+          DIST_CONFIG_OLD_FILENAME="dist-config.json"
+          DIST_CONFIG_NEW_FILENAME="dist-config2.json"
+
+          aws cloudfront get-distribution --id $CLOUDFRONT_DISTRIBUTION_ID > $DIST_CONFIG_OLD_FILENAME
+          Etag=`cat $DIST_CONFIG_OLD_FILENAME | jq '.ETag' | tr -d \"`
+          cat $DIST_CONFIG_OLD_FILENAME | jq \
+              --arg targetOriginId $CLOUDFRONT_ORIGIN_ID \
+              --arg newOriginPath $NEW_ORIGIN_PATH \
+              '.Distribution.DistributionConfig | .Origins.Items = (.Origins.Items | map(if (.Id == $targetOriginId) then (.OriginPath = $newOriginPath) else . end))' \
+              > $DIST_CONFIG_NEW_FILENAME
+          aws cloudfront update-distribution --id $CLOUDFRONT_DISTRIBUTION_ID \
+              --distribution-config "file://${DIST_CONFIG_NEW_FILENAME}" \
+              --if-match $Etag \
+              > /dev/null
+          aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
+          rm -f $DIST_CONFIG_OLD_FILENAME $DIST_CONFIG_NEW_FILENAME

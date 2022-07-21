@@ -1,0 +1,92 @@
+name: Reusable CI
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+        description: dev, qa, uat, staging or prod
+      skipTests:
+        required: true
+        type: boolean
+      skipLints:
+        required: true
+        type: boolean
+    secrets:
+      nodeAuthToken:
+        required: true
+
+
+env:
+  ENV: ${{ inputs.env }}
+
+jobs:
+  install:
+    name: Install dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.10.0
+          cache: npm
+          FORCE_COLOR: 0
+
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Npm auth
+        run: printf '%s\n' '@cthesigns:registry=https://npm.pkg.github.com/' '//npm.pkg.github.com/:_authToken=${{secrets.nodeAuthToken}}' 'engine-strict=true' > ~/.npmrc
+  
+      - name: Install dependencies
+        run: npm --production=false install
+    
+  lint:
+    name: Running linters
+    needs: install
+    if: ${{ !inputs.skipLints }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.10.0
+          cache: npm
+          FORCE_COLOR: 0
+
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Lint files
+        run: npm run lint:ci
+
+  test:
+    name: Running tests
+    needs: install
+    if: ${{ !inputs.skipTests }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.10.0
+          cache: npm
+          FORCE_COLOR: 0
+
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Run unit tests
+        run: npm run test:ci
