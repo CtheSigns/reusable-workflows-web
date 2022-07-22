@@ -36,8 +36,6 @@ on:
         required: true
       rollbarToken:
         required: true
-      e2eGithubAccessToken:
-        required: true
 
 env:
   ENV: ${{ inputs.env }}
