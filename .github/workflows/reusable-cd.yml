@@ -55,20 +55,12 @@ jobs:
           FORCE_COLOR: 0
 
       - uses: actions/cache@v3
-        id: build-cache
-        with:
-          path: "dist"
-          key: ${{ github.sha }}
-
-      - uses: actions/cache@v3
         id: npm-cache
-        if: steps.build-cache.outputs.cache-hit != 'true'
         with:
           path: "**/node_modules"
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Build
-        if: steps.build-cache.outputs.cache-hit != 'true'
         run: npm run build:${{ inputs.env }}
 
       - name: Upload Artifact
