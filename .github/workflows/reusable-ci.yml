@@ -45,7 +45,7 @@ jobs:
         run: printf '%s\n' '@cthesigns:registry=https://npm.pkg.github.com/' '//npm.pkg.github.com/:_authToken=${{secrets.nodeAuthToken}}' 'engine-strict=true' > ~/.npmrc
   
       - name: Install dependencies
-        run: npm --production=false install
+        run: npm ci
     
   lint:
     name: Running linters
