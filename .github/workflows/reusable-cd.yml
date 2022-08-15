@@ -104,6 +104,10 @@ jobs:
           dist-id: ${{ inputs.cloudfrontDistribution }}
           invalidation: /*
 
+      - name: Clean "latest" directory
+        run: |
+          rm -rf ${{ inputs.cloudFrontS3Bucket }}/latest${{ inputs.bucketBuildPath }}
+
       - name: Update "latest" directory
         uses: reggionick/s3-deploy@v3
         with:
