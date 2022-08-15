@@ -104,6 +104,15 @@ jobs:
           dist-id: ${{ inputs.cloudfrontDistribution }}
           invalidation: /*
 
+      - name: Update "latest" directory
+        uses: reggionick/s3-deploy@v3
+        with:
+            folder: dist
+            bucket: ${{ inputs.cloudFrontS3Bucket }}/latest${{ inputs.bucketBuildPath }}
+            bucket-region: eu-west-2
+            dist-id: ${{ inputs.cloudfrontDistribution }}
+            delete-removed: true
+
       - name: Update origin
         run: |
           CLOUDFRONT_DISTRIBUTION_ID="${{ inputs.cloudfrontDistribution }}"
