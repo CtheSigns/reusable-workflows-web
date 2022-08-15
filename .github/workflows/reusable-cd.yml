@@ -105,8 +105,15 @@ jobs:
           invalidation: /*
 
       - name: Clean "latest" directory
-        run: |
-          rm -rf ${{ inputs.cloudFrontS3Bucket }}/latest${{ inputs.bucketBuildPath }}
+        uses: vitorsgomes/s3-rm-action@master
+        with:
+          args: --recursive
+        env:
+          AWS_S3_BUCKET: ${{ inputs.cloudFrontS3Bucket }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.awsAccessKey }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.awsSecretKey }}
+          AWS_REGION: ${{ inputs.awsRegion }}
+          PATH_TO_DELETE: latest${{ inputs.bucketBuildPath }}
 
       - name: Update "latest" directory
         uses: reggionick/s3-deploy@v3
