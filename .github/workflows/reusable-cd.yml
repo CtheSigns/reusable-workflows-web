@@ -120,7 +120,7 @@ jobs:
         with:
             folder: dist
             bucket: ${{ inputs.cloudFrontS3Bucket }}/latest${{ inputs.bucketBuildPath }}
-            bucket-region: eu-west-2
+            bucket-region: ${{ inputs.awsRegion }}
             dist-id: ${{ inputs.cloudfrontDistribution }}
             delete-removed: true
 
