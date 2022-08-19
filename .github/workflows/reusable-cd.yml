@@ -116,13 +116,12 @@ jobs:
           PATH_TO_DELETE: latest${{ inputs.bucketBuildPath }}
 
       - name: Update "latest" directory
-        uses: reggionick/s3-deploy@v3
+        uses: lbertenasco/s3-deploy@v1
         with:
-            folder: dist
-            bucket: ${{ inputs.cloudFrontS3Bucket }}/latest${{ inputs.bucketBuildPath }}
-            bucket-region: ${{ inputs.awsRegion }}
-            dist-id: ${{ inputs.cloudfrontDistribution }}
-            delete-removed: true
+          folder: dist
+          bucket: ${{ inputs.cloudFrontS3Bucket }}/latest${{ inputs.bucketBuildPath }}
+          dist-id: ${{ inputs.cloudfrontDistribution }}
+          invalidation: /*
 
       - name: Update origin
         run: |
