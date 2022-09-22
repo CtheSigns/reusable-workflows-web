@@ -13,6 +13,9 @@ on:
       skipLints:
         required: true
         type: boolean
+      skipCoverage:
+        required: true
+        type: boolean
     secrets:
       nodeAuthToken:
         required: true
@@ -90,3 +93,19 @@ jobs:
 
       - name: Run unit tests
         run: npm run test:ci
+
+      - name: Upload coverage summary
+        if: ${{ !inputs.skipCoverage && github.event_name == 'push' }}
+        uses: actions/upload-artifact@master
+        with:
+          name: coverage-main
+          path: coverage/coverage-summary.json
+
+      - name: Download coverage summary
+        if: ${{ !inputs.skipCoverage && github.event_name == 'pull' }}
+        uses: actions/download-artifact@master
+        with:
+          name: coverage-main
+
+      - name: List dir
+        run: ls
