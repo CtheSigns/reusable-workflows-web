@@ -102,7 +102,7 @@ jobs:
           path: coverage/coverage-summary.json
 
       - name: Download coverage summary
-        if: ${{ !inputs.skipCoverage && github.event_name == 'pull' }}
+        if: ${{ !inputs.skipCoverage && github.event_name == 'pull_request' }}
         uses: actions/download-artifact@master
         with:
           name: coverage-main
