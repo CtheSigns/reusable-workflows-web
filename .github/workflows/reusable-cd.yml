@@ -67,7 +67,9 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: dist
-          path: dist
+          path: |
+            dist
+            !dist/*.map
 
   deployToCloudFront:
     name: Deploy to Cloudfront
