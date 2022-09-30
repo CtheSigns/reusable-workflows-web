@@ -1,0 +1,45 @@
+name: Release NPM package
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+jobs:
+  release:
+    name: Release a new version of NPM package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.10.0
+          cache: npm
+
+      - name: Setup Node cache
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Setup NPM auth
+        run: printf '%s\n' '@cthesigns:registry=https://npm.pkg.github.com/' '//npm.pkg.github.com/:_authToken=${{secrets.GITHUB_TOKEN}}' 'engine-strict=true' > ~/.npmrc
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump version
+        uses: phips28/gh-action-bump-version@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          version-type: ${{ inputs.version }}
+          commit-message: '{{version}}'
+          skip-tag: true
+
+      - name: Publish
+        run: npm publish
