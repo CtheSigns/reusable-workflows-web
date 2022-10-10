@@ -6,6 +6,15 @@ on:
       version:
         type: string
         required: true
+      skipTag:
+        type: boolean
+        required: false
+        default: false
+      tagPrefix:
+        type: string
+        required: false
+        default: v
+
 jobs:
   release:
     name: Release a new version of NPM package
@@ -18,13 +27,6 @@ jobs:
         with:
           node-version: 16.10.0
           cache: npm
-
-      - name: Setup Node cache
-        uses: actions/cache@v3
-        id: npm-cache
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Setup NPM auth
         run: printf '%s\n' '@cthesigns:registry=https://npm.pkg.github.com/' '//npm.pkg.github.com/:_authToken=${{secrets.GITHUB_TOKEN}}' 'engine-strict=true' > ~/.npmrc
@@ -39,7 +41,8 @@ jobs:
         with:
           version-type: ${{ inputs.version }}
           commit-message: '{{version}}'
-          skip-tag: true
+          skip-tag: ${{ inputs.skipTag }}
+          tag-prefix: ${{ inputs.tagPrefix }}
 
       - name: Publish
         run: npm publish
