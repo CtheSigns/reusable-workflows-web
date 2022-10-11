@@ -14,6 +14,9 @@ on:
         type: string
         required: false
         default: v
+    secrets:
+      npmReleaseToken:
+        required: true
 
 jobs:
   release:
@@ -21,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.npmReleaseToken }}
 
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -35,9 +40,9 @@ jobs:
         run: npm ci
 
       - name: Bump version
-        uses: phips28/gh-action-bump-version@master
+        uses: phips28/gh-action-bump-version@v9.0.31
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.npmReleaseToken }}
         with:
           version-type: ${{ inputs.version }}
           commit-message: '{{version}}'
